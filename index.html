@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PesaClarity — Household Finance Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root{
+    --ink:#14211C;
+    --paper:#F2F5F1;
+    --card:#FFFFFF;
+    --green:#0C6B4F;
+    --green-deep:#08402F;
+    --lime:#9BD341;
+    --amber:#E0A426;
+    --red:#C64B33;
+    --muted:#5E6E66;
+    --line:#DCE4DE;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:"Segoe UI",system-ui,-apple-system,sans-serif;
+    background:var(--paper);
+    color:var(--ink);
+    line-height:1.5;
+  }
+  header{
+    background:var(--green-deep);
+    color:#fff;
+    padding:22px 28px 0;
+  }
+  .brand{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+  .brand h1{
+    font-family:Georgia,"Times New Roman",serif;
+    font-weight:600;font-size:1.6rem;letter-spacing:.2px;
+  }
+  .brand h1 span{color:var(--lime)}
+  .brand small{color:#BFD6CC;font-size:.85rem}
+  .monthbar{
+    display:flex;justify-content:space-between;align-items:center;
+    flex-wrap:wrap;gap:10px;margin-top:14px;
+  }
+  .monthbar .month{font-size:.95rem;color:#DDEBE4}
+  .monthbar .month b{color:#fff}
+  nav{display:flex;gap:4px;margin-top:16px;flex-wrap:wrap}
+  nav button{
+    background:transparent;border:none;color:#BFD6CC;
+    padding:10px 16px;font-size:.9rem;cursor:pointer;
+    border-radius:10px 10px 0 0;font-family:inherit;
+  }
+  nav button.active{background:var(--paper);color:var(--green-deep);font-weight:600}
+  nav button:hover:not(.active){background:rgba(255,255,255,.08);color:#fff}
+  main{max-width:1100px;margin:0 auto;padding:26px 20px 60px}
+  .view{display:none}
+  .view.active{display:block}
+  .grid{display:grid;gap:18px}
+  .g2{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+  .g3{grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
+  .card{
+    background:var(--card);border:1px solid var(--line);
+    border-radius:var(--radius);padding:20px 22px;
+  }
+  .card h3{
+    font-size:.78rem;text-transform:uppercase;letter-spacing:.08em;
+    color:var(--muted);font-weight:600;margin-bottom:8px;
+  }
+  .big{font-family:Georgia,serif;font-size:1.9rem;font-weight:600}
+  .sub{font-size:.85rem;color:var(--muted);margin-top:4px}
+  .good{color:var(--green)}
+  .warn{color:var(--amber)}
+  .bad{color:var(--red)}
+  .accbar{
+    height:14px;background:#E7EDE8;border-radius:7px;overflow:hidden;
+    margin-top:12px;display:flex;
+  }
+  .accbar div{height:100%}
+  .acc-tracked{background:var(--green)}
+  .acc-untracked{background:var(--red)}
+  .legend{display:flex;gap:18px;margin-top:10px;font-size:.8rem;color:var(--muted);flex-wrap:wrap}
+  .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px}
+  .section-title{
+    font-family:Georgia,serif;font-size:1.25rem;margin:30px 0 14px;
+    color:var(--green-deep);
+  }
+  canvas{max-height:280px}
+  .goal{margin-bottom:18px}
+  .goal .row{display:flex;justify-content:space-between;font-size:.9rem;margin-bottom:6px}
+  .goal .row b{font-weight:600}
+  .goal .bar{height:12px;background:#E7EDE8;border-radius:6px;overflow:hidden}
+  .goal .bar div{height:100%;background:var(--green);border-radius:6px;transition:width .6s ease}
+  .goal.holiday .bar div{background:var(--lime)}
+  .goal.emergency .bar div{background:var(--green)}
+  .goal.education .bar div{background:var(--amber)}
+  .envelope{
+    border:1px solid var(--line);border-radius:12px;padding:16px;
+    margin-bottom:14px;background:#FBFDFB;
+  }
+  .envelope .head{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px}
+  .envelope .head b{font-size:.95rem}
+  .pill{
+    font-size:.72rem;padding:3px 10px;border-radius:20px;font-weight:600;
+  }
+  .pill.ok{background:#E2F2E6;color:var(--green)}
+  .pill.near{background:#FBF0D8;color:#8A6414}
+  .pill.over{background:#F9E3DD;color:var(--red)}
+  table{width:100%;border-collapse:collapse;font-size:.87rem}
+  th{
+    text-align:left;font-size:.72rem;text-transform:uppercase;
+    letter-spacing:.07em;color:var(--muted);padding:8px 10px;
+    border-bottom:2px solid var(--line);
+  }
+  td{padding:9px 10px;border-bottom:1px solid var(--line)}
+  td.amt{text-align:right;font-variant-numeric:tabular-nums}
+  .cat-tag{
+    font-size:.72rem;padding:2px 9px;border-radius:12px;
+    background:#EAF1EC;color:var(--green-deep);font-weight:600;white-space:nowrap;
+  }
+  .upload{
+    border:2px dashed var(--green);border-radius:var(--radius);
+    padding:44px 24px;text-align:center;background:#F7FBF8;
+    cursor:pointer;transition:background .2s;
+  }
+  .upload:hover{background:#EDF6EF}
+  .upload .icon{font-size:2.2rem}
+  .upload p{margin-top:8px;color:var(--muted);font-size:.9rem}
+  .upload b{color:var(--green-deep)}
+  .btn{
+    background:var(--green);color:#fff;border:none;padding:11px 22px;
+    border-radius:10px;font-size:.9rem;font-weight:600;cursor:pointer;
+    font-family:inherit;margin-top:16px;
+  }
+  .btn:hover{background:var(--green-deep)}
+  .steps{margin-top:22px;display:none}
+  .steps.show{display:block}
+  .step{
+    display:flex;gap:12px;align-items:center;padding:10px 0;
+    font-size:.9rem;color:var(--muted);opacity:0;transform:translateY(4px);
+    transition:opacity .4s,transform .4s;
+  }
+  .step.on{opacity:1;transform:none;color:var(--ink)}
+  .step .tick{
+    width:22px;height:22px;border-radius:50%;background:#E2F2E6;
+    color:var(--green);display:flex;align-items:center;justify-content:center;
+    font-size:.75rem;font-weight:700;flex-shrink:0;
+  }
+  .alertcard{
+    background:#FBF6E9;border:1px solid #EAD9A8;border-radius:12px;
+    padding:14px 16px;font-size:.88rem;display:flex;gap:10px;margin-top:16px;
+  }
+  .alertcard .em{font-size:1.2rem}
+  footer{
+    text-align:center;font-size:.78rem;color:var(--muted);
+    padding:24px;border-top:1px solid var(--line);
+  }
+  @media (max-width:640px){
+    .big{font-size:1.5rem}
+    main{padding:18px 12px 40px}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <h1>Pesa<span>Clarity</span></h1>
+    <small>Every shilling, accounted for — together.</small>
+  </div>
+  <div class="monthbar">
+    <div class="month">Household view · <b>June 2026</b> · Statement uploaded 1 Jul</div>
+    <div class="month">Members: <b>4</b> · Accounts linked: <b>3</b></div>
+  </div>
+  <nav>
+    <button class="active" data-view="overview">Overview</button>
+    <button data-view="categories">Spending</button>
+    <button data-view="goals">Shared Goals</button>
+    <button data-view="social">Family &amp; Friends</button>
+    <button data-view="upload">Upload Statement</button>
+  </nav>
+</header>
+
+<main>
+
+  <!-- OVERVIEW -->
+  <section class="view active" id="overview">
+    <div class="grid g3">
+      <div class="card">
+        <h3>Total income · June</h3>
+        <div class="big">KES 318,400</div>
+        <div class="sub">Salaries 91% · MMF interest 6% · Side income 3%</div>
+      </div>
+      <div class="card">
+        <h3>Total spending · June</h3>
+        <div class="big">KES 276,150</div>
+        <div class="sub warn">▲ 8% above monthly budget of KES 255,000</div>
+      </div>
+      <div class="card">
+        <h3>Left this month</h3>
+        <div class="big good">KES 42,250</div>
+        <div class="sub">Moved to savings &amp; goals automatically</div>
+      </div>
+    </div>
+
+    <h2 class="section-title">Shilling accountability</h2>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <div>
+          <div class="big good">96.4%</div>
+          <div class="sub">of every shilling spent this month is traced to a category</div>
+        </div>
+        <div style="text-align:right">
+          <div class="big bad" style="font-size:1.3rem">KES 9,940</div>
+          <div class="sub">still unaccounted — mostly small cash withdrawals</div>
+        </div>
+      </div>
+      <div class="accbar">
+        <div class="acc-tracked" style="width:96.4%"></div>
+        <div class="acc-untracked" style="width:3.6%"></div>
+      </div>
+      <div class="legend">
+        <span><span class="dot" style="background:var(--green)"></span>Traced: KES 266,210</span>
+        <span><span class="dot" style="background:var(--red)"></span>Unaccounted: KES 9,940</span>
+      </div>
+      <div class="alertcard">
+        <div class="em">💡</div>
+        <div><b>Gentle nudge:</b> Untraced cash withdrawals dropped from KES 24,300 in April to KES 9,940 in June. The household is getting clearer every month.</div>
+      </div>
+    </div>
+
+    <h2 class="section-title">Income vs spending — last 6 months</h2>
+    <div class="card"><canvas id="trendChart"></canvas></div>
+  </section>
+
+  <!-- SPENDING -->
+  <section class="view" id="categories">
+    <div class="grid g2">
+      <div class="card">
+        <h3>Where the money went · June</h3>
+        <canvas id="donutChart"></canvas>
+      </div>
+      <div class="card">
+        <h3>Budget vs actual by category</h3>
+        <canvas id="budgetChart"></canvas>
+      </div>
+    </div>
+
+    <h2 class="section-title">Recent parsed transactions</h2>
+    <div class="card" style="overflow-x:auto">
+      <table>
+        <thead><tr><th>Date</th><th>Description (from M-Pesa)</th><th>Category</th><th style="text-align:right">Amount</th></tr></thead>
+        <tbody>
+          <tr><td>28 Jun</td><td>PAYBILL — NAIROBI WATER</td><td><span class="cat-tag">Utilities</span></td><td class="amt">KES 2,340</td></tr>
+          <tr><td>27 Jun</td><td>TILL — QUICKMART RUAKA</td><td><span class="cat-tag">Groceries</span></td><td class="amt">KES 6,180</td></tr>
+          <tr><td>26 Jun</td><td>SEND MONEY — J. MUTUA</td><td><span class="cat-tag">Family support</span></td><td class="amt">KES 5,000</td></tr>
+          <tr><td>25 Jun</td><td>PAYBILL — KPLC PREPAID</td><td><span class="cat-tag">Utilities</span></td><td class="amt">KES 3,500</td></tr>
+          <tr><td>24 Jun</td><td>TILL — HIGHLANDS SCHOOL</td><td><span class="cat-tag">Education</span></td><td class="amt">KES 18,000</td></tr>
+          <tr><td>22 Jun</td><td>AGENT WITHDRAWAL</td><td><span class="cat-tag" style="background:#F9E3DD;color:var(--red)">Unaccounted</span></td><td class="amt">KES 4,000</td></tr>
+          <tr><td>21 Jun</td><td>TILL — JAVA HOUSE KILIMANI</td><td><span class="cat-tag">Fun &amp; recreation</span></td><td class="amt">KES 2,750</td></tr>
+        </tbody>
+      </table>
+      <div class="sub" style="margin-top:10px">Auto-categorised by the parsing engine · tap any row to re-assign (prototype)</div>
+    </div>
+  </section>
+
+  <!-- GOALS -->
+  <section class="view" id="goals">
+    <div class="card">
+      <h3>Shared savings goals — visible to every member</h3>
+      <p class="sub" style="margin-bottom:20px">"I wish we had a clear, shared savings goal on the screen that we could all watch grow together." — set by the household, tracked automatically.</p>
+
+      <div class="goal emergency">
+        <div class="row"><b>🛡️ Emergency fund</b><span>KES 182,000 / 300,000</span></div>
+        <div class="bar"><div style="width:61%"></div></div>
+        <div class="sub">61% — covers ~2.1 months of essential spending</div>
+      </div>
+
+      <div class="goal holiday">
+        <div class="row"><b>🏖️ Family holiday — Diani, Dec 2026</b><span>KES 64,500 / 120,000</span></div>
+        <div class="bar"><div style="width:54%"></div></div>
+        <div class="sub">54% — on track if KES 9,300/month continues</div>
+      </div>
+
+      <div class="goal education">
+        <div class="row"><b>🎓 School fees buffer — Term 1, 2027</b><span>KES 27,000 / 90,000</span></div>
+        <div class="bar"><div style="width:30%"></div></div>
+        <div class="sub">30% — auto-transfer of KES 9,000 runs on the 1st of every month</div>
+      </div>
+    </div>
+
+    <h2 class="section-title">Investment visibility</h2>
+    <div class="grid g3">
+      <div class="card"><h3>Money Market Fund</h3><div class="big">KES 412,700</div><div class="sub good">▲ KES 3,890 interest this month</div></div>
+      <div class="card"><h3>SACCO deposits</h3><div class="big">KES 268,000</div><div class="sub">Next dividend: Dec 2026</div></div>
+      <div class="card"><h3>Total net saved YTD</h3><div class="big good">KES 231,400</div><div class="sub">vs KES 96,000 same period last year</div></div>
+    </div>
+  </section>
+
+  <!-- SOCIAL -->
+  <section class="view" id="social">
+    <div class="card">
+      <h3>Family &amp; friends support — planned, not guilty</h3>
+      <p class="sub" style="margin-bottom:18px">A fixed monthly envelope for supporting loved ones. Giving stays generous <i>and</i> budgeted — so "yes" never eats into savings, and "not this month" comes with data, not guilt.</p>
+
+      <div class="envelope">
+        <div class="head"><b>June envelope · KES 15,000 limit</b><span class="pill near">KES 13,500 used — 90%</span></div>
+        <div class="goal" style="margin:10px 0 0"><div class="bar"><div style="width:90%;background:var(--amber)"></div></div></div>
+        <div class="sub" style="margin-top:8px">Remaining: KES 1,500 · resets 1 Jul</div>
+      </div>
+
+      <div class="envelope">
+        <div class="head"><b>Recipients this month</b></div>
+        <table style="margin-top:10px">
+          <tbody>
+            <tr><td>Sibling — school support</td><td class="amt">KES 6,000</td></tr>
+            <tr><td>Parent — monthly upkeep</td><td class="amt">KES 5,000</td></tr>
+            <tr><td>Friend — emergency request</td><td class="amt">KES 2,500</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="alertcard">
+        <div class="em">🔔</div>
+        <div><b>Gentle alert (before, not after):</b> A new send-money request would exceed this month's support envelope by KES 1,000. Approve anyway, delay to July, or split it?</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- UPLOAD -->
+  <section class="view" id="upload">
+    <div class="card">
+      <h3>Monthly statement upload — the only manual step</h3>
+      <p class="sub" style="margin-bottom:18px">Once a month, any member drops in their M-Pesa PDF statement. The engine does the rest. No daily logging, no notebooks, no decoding SMS threads.</p>
+
+      <div class="upload" onclick="runDemo()">
+        <div class="icon">📄</div>
+        <p><b>Drop your M-Pesa statement here</b> or click to simulate<br>Accepts the standard password-protected PDF from Safaricom</p>
+      </div>
+
+      <div class="steps" id="steps">
+        <div class="step"><div class="tick">✓</div><span>Statement decrypted &amp; read — <b>247 transactions</b> found (1–30 Jun)</span></div>
+        <div class="step"><div class="tick">✓</div><span>Auto-categorised <b>238 transactions</b> using household rules + learned patterns</span></div>
+        <div class="step"><div class="tick">✓</div><span>Flagged <b>9 transactions</b> for quick review (new merchants, cash withdrawals)</span></div>
+        <div class="step"><div class="tick">✓</div><span>Dashboard refreshed · goals updated · envelope balances recalculated</span></div>
+        <div class="step"><div class="tick">✓</div><span>Summary shared to household — <b>elapsed time: 34 seconds</b></span></div>
+      </div>
+      <button class="btn" onclick="runDemo()">Run parsing demo</button>
+    </div>
+
+    <h2 class="section-title">Privacy, by design</h2>
+    <div class="grid g2">
+      <div class="card"><h3>Personal space respected</h3><p style="font-size:.9rem">Each member keeps a private "personal spending" category whose details are never itemised in the shared view — only the total. Shared visibility applies to shared money.</p></div>
+      <div class="card"><h3>Data stays home</h3><p style="font-size:.9rem">Statements are processed locally. Nothing is uploaded to third-party servers. The household owns its own data, full stop.</p></div>
+    </div>
+  </section>
+
+</main>
+
+<footer>PesaClarity · Prototype v0.2 · Built for the Design Thinking project — Ethics in Data Science, Strathmore University · Sample data shown</footer>
+
+<script>
+// tab navigation
+document.querySelectorAll('nav button').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(btn.dataset.view).classList.add('active');
+  });
+});
+
+// upload demo
+function runDemo(){
+  const box=document.getElementById('steps');
+  box.classList.add('show');
+  const steps=box.querySelectorAll('.step');
+  steps.forEach(s=>s.classList.remove('on'));
+  steps.forEach((s,i)=>setTimeout(()=>s.classList.add('on'),400+i*650));
+}
+
+// charts
+const ink='#14211C', muted='#5E6E66', line='#DCE4DE';
+Chart.defaults.font.family='"Segoe UI",system-ui,sans-serif';
+Chart.defaults.color=muted;
+
+new Chart(document.getElementById('trendChart'),{
+  type:'line',
+  data:{
+    labels:['Jan','Feb','Mar','Apr','May','Jun'],
+    datasets:[
+      {label:'Income',data:[305,312,318,309,321,318.4],borderColor:'#0C6B4F',backgroundColor:'rgba(12,107,79,.08)',fill:true,tension:.35},
+      {label:'Spending',data:[298,301,289,296,281,276.2],borderColor:'#C64B33',backgroundColor:'transparent',tension:.35,borderDash:[5,4]}
+    ]
+  },
+  options:{
+    plugins:{legend:{position:'bottom'}},
+    scales:{
+      y:{title:{display:true,text:'KES (thousands)'},grid:{color:line}},
+      x:{grid:{display:false}}
+    }
+  }
+});
+
+new Chart(document.getElementById('donutChart'),{
+  type:'doughnut',
+  data:{
+    labels:['Rent','Groceries & food','Education','Utilities','Transport','Family support','Fun & recreation','Personal','Unaccounted'],
+    datasets:[{
+      data:[65000,48200,38000,21400,24600,13500,18300,37210,9940],
+      backgroundColor:['#08402F','#0C6B4F','#3E8E6E','#9BD341','#C9DFA8','#E0A426','#8AB0A0','#5E6E66','#C64B33'],
+      borderWidth:2,borderColor:'#fff'
+    }]
+  },
+  options:{plugins:{legend:{position:'bottom',labels:{boxWidth:11,font:{size:11}}}},cutout:'58%'}
+});
+
+new Chart(document.getElementById('budgetChart'),{
+  type:'bar',
+  data:{
+    labels:['Groceries','Education','Utilities','Transport','Family support','Fun'],
+    datasets:[
+      {label:'Budget',data:[45,38,22,25,15,15],backgroundColor:'#DCE4DE'},
+      {label:'Actual',data:[48.2,38,21.4,24.6,13.5,18.3],backgroundColor:'#0C6B4F'}
+    ]
+  },
+  options:{
+    plugins:{legend:{position:'bottom'}},
+    scales:{
+      y:{title:{display:true,text:'KES (thousands)'},grid:{color:line}},
+      x:{grid:{display:false}}
+    }
+  }
+});
+</script>
+</body>
+</html>
